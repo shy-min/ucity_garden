@@ -1,15 +1,14 @@
-
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb; 
-import 'package:cloud_firestore/cloud_firestore.dart' hide Filter; // Hide Filter to prevent Stream conflict
+import 'package:cloud_firestore/cloud_firestore.dart' hide Filter; 
 import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'firebase_options.dart'; 
 
 // --- GLOBAL VARIABLES ---
 final streamClient = StreamChatClient(
-  'srzvkmn6xvrj', // Your Stream API Key
+  'srzvkmn6xvrj', 
   logLevel: Level.INFO,
 );
 
@@ -37,10 +36,6 @@ class MyApp extends StatelessWidget {
           foregroundColor: Colors.white,
           elevation: 0,
         ),
-        floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          backgroundColor: Color(0xFF1ca931),
-          foregroundColor: Colors.white,
-        ),
       ),
       builder: (context, child) {
         return StreamChat(client: streamClient, child: child!);
@@ -51,7 +46,7 @@ class MyApp extends StatelessWidget {
 }
 
 // ==========================================
-// --- AUTHENTICATION SCREENS ---
+// --- AUTHENTICATION & PROFILE SETUP ---
 // ==========================================
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
@@ -81,6 +76,8 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _firstNameController = TextEditingController(); // New
+  final _lastNameController = TextEditingController();  // New
   bool isLogin = true; 
   bool isLoading = false;
 
@@ -93,10 +90,19 @@ class _LoginScreenState extends State<LoginScreen> {
           password: _passwordController.text.trim(),
         );
       } else {
-        await fb.FirebaseAuth.instance.createUserWithEmailAndPassword(
+        // 1. Create Auth User
+        fb.UserCredential cred = await fb.FirebaseAuth.instance.createUserWithEmailAndPassword(
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
         );
+
+        // 2. Create Firestore Profile Document
+        await FirebaseFirestore.instance.collection('users').doc(cred.user!.uid).set({
+          'firstName': _firstNameController.text.trim(),
+          'lastName': _lastNameController.text.trim(),
+          'email': _emailController.text.trim(),
+          'joinedAt': Timestamp.now(),
+        });
       }
     } on fb.FirebaseAuthException catch (e) {
       if (mounted) {
@@ -112,37 +118,54 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(20.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text("The Garden", style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white)),
-            const SizedBox(height: 40),
-            TextField(
-              controller: _emailController,
-              decoration: const InputDecoration(labelText: "Email", border: OutlineInputBorder(), filled: true, fillColor: Color(0xFF3b3e44)),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _passwordController,
-              obscureText: true, 
-              decoration: const InputDecoration(labelText: "Password", border: OutlineInputBorder(), filled: true, fillColor: Color(0xFF3b3e44)),
-            ),
-            const SizedBox(height: 20),
-            isLoading 
-            ? const CircularProgressIndicator()
-            : SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1ca931), padding: const EdgeInsets.all(15)),
-                  onPressed: _submit,
-                  child: Text(isLogin ? "Sign In" : "Sign Up", style: const TextStyle(color: Colors.white)),
+        child: SingleChildScrollView( // Added to prevent overflow with more fields
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(height: 80),
+              const Text("The Garden", style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white)),
+              const SizedBox(height: 40),
+              
+              if (!isLogin) ...[
+                TextField(
+                  controller: _firstNameController,
+                  decoration: const InputDecoration(labelText: "First Name", border: OutlineInputBorder(), filled: true, fillColor: Color(0xFF3b3e44)),
                 ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _lastNameController,
+                  decoration: const InputDecoration(labelText: "Last Name", border: OutlineInputBorder(), filled: true, fillColor: Color(0xFF3b3e44)),
+                ),
+                const SizedBox(height: 10),
+              ],
+
+              TextField(
+                controller: _emailController,
+                decoration: const InputDecoration(labelText: "Email", border: OutlineInputBorder(), filled: true, fillColor: Color(0xFF3b3e44)),
               ),
-            TextButton(
-              onPressed: () => setState(() => isLogin = !isLogin),
-              child: Text(isLogin ? "Create Account" : "I have an account", style: const TextStyle(color: Color(0xFF1ca931))),
-            )
-          ],
+              const SizedBox(height: 10),
+              TextField(
+                controller: _passwordController,
+                obscureText: true, 
+                decoration: const InputDecoration(labelText: "Password", border: OutlineInputBorder(), filled: true, fillColor: Color(0xFF3b3e44)),
+              ),
+              const SizedBox(height: 20),
+              isLoading 
+              ? const CircularProgressIndicator()
+              : SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1ca931), padding: const EdgeInsets.all(15)),
+                    onPressed: _submit,
+                    child: Text(isLogin ? "Sign In" : "Sign Up", style: const TextStyle(color: Colors.white)),
+                  ),
+                ),
+              TextButton(
+                onPressed: () => setState(() => isLogin = !isLogin),
+                child: Text(isLogin ? "Create Account" : "I have an account", style: const TextStyle(color: Color(0xFF1ca931))),
+              )
+            ],
+          ),
         ),
       ),
     );
@@ -150,7 +173,7 @@ class _LoginScreenState extends State<LoginScreen> {
 }
 
 // ==========================================
-// --- MAIN NAVIGATION (BOTTOM TABS) ---
+// --- MAIN NAVIGATION ---
 // ==========================================
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -176,13 +199,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Expanded to 5 Tabs
   final List<Widget> _screens = [
-    const EventsScreen(),        // 0
-    const PrayerWallScreen(),    // 1
-    const NeedsBoardScreen(),    // 2
-    const ChannelListScreen(),   // 3
-    const ProfileScreen(),       // 4
+    const EventsScreen(),
+    const PrayerWallScreen(),
+    const NeedsBoardScreen(),
+    const ChannelListScreen(),
+    const ProfileScreen(), 
   ];
 
   @override
@@ -195,7 +217,7 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: const Color(0xFF25292e),
         selectedItemColor: const Color(0xFF1ca931), 
         unselectedItemColor: Colors.grey,
-        type: BottomNavigationBarType.fixed, // Required when having more than 3 tabs
+        type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.event), label: "Events"),
           BottomNavigationBarItem(icon: Icon(Icons.favorite), label: "Prayers"),
@@ -209,7 +231,7 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 // ==========================================
-// --- 1. EVENTS & TASKS SCREEN ---
+// --- 1. EVENTS SCREEN ---
 // ==========================================
 class EventsScreen extends StatefulWidget {
   const EventsScreen({super.key});
@@ -280,7 +302,6 @@ class _EventsScreenState extends State<EventsScreen> {
     );
   }
 
-  // --- TASK MANAGER BOTTOM SHEET ---
   void _showTasksDialog(BuildContext context, String eventId, String eventTitle) {
     final taskController = TextEditingController();
     final currentUserId = fb.FirebaseAuth.instance.currentUser!.uid;
@@ -297,15 +318,12 @@ class _EventsScreenState extends State<EventsScreen> {
           children: [
             Text("Volunteer Tasks: $eventTitle", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
             const SizedBox(height: 10),
-            // Task List
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance.collection('events').doc(eventId).collection('tasks').snapshots(),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
                   final tasks = snapshot.data!.docs;
-                  if (tasks.isEmpty) return const Center(child: Text("No tasks yet.", style: TextStyle(color: Colors.grey)));
-
                   return ListView.builder(
                     itemCount: tasks.length,
                     itemBuilder: (context, index) {
@@ -315,15 +333,12 @@ class _EventsScreenState extends State<EventsScreen> {
 
                       return ListTile(
                         title: Text(task['name'], style: TextStyle(color: isClaimed ? Colors.grey : Colors.white, decoration: isClaimed ? TextDecoration.lineThrough : null)),
-                        subtitle: isClaimed ? Text("Claimed by ${task['assigneeName']}", style: const TextStyle(color: Color(0xFF1ca931))) : null,
                         trailing: ElevatedButton(
                           style: ElevatedButton.styleFrom(backgroundColor: isMine ? Colors.red : (isClaimed ? Colors.grey : const Color(0xFF1ca931))),
                           onPressed: () async {
                             if (isMine) {
-                              // Unclaim
                               await task.reference.update({'assigneeId': null, 'assigneeName': null});
                             } else if (!isClaimed) {
-                              // Claim
                               await task.reference.update({'assigneeId': currentUserId, 'assigneeName': userEmail});
                             }
                           },
@@ -335,25 +350,16 @@ class _EventsScreenState extends State<EventsScreen> {
                 },
               ),
             ),
-            // Add Task Input
             Row(
               children: [
-                Expanded(child: TextField(controller: taskController, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(hintText: "E.g. Bring napkins", hintStyle: TextStyle(color: Colors.grey)))),
-                IconButton(
-                  icon: const Icon(Icons.add_circle, color: Color(0xFF1ca931), size: 40),
-                  onPressed: () async {
-                    if (taskController.text.isEmpty) return;
-                    await FirebaseFirestore.instance.collection('events').doc(eventId).collection('tasks').add({
-                      'name': taskController.text,
-                      'assigneeId': null,
-                      'assigneeName': null,
-                    });
-                    taskController.clear();
-                  },
-                )
+                Expanded(child: TextField(controller: taskController, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(hintText: "Add Task..."))),
+                IconButton(icon: const Icon(Icons.add_circle, color: Color(0xFF1ca931)), onPressed: () async {
+                  if (taskController.text.isEmpty) return;
+                  await FirebaseFirestore.instance.collection('events').doc(eventId).collection('tasks').add({'name': taskController.text, 'assigneeId': null, 'assigneeName': null});
+                  taskController.clear();
+                })
               ],
             ),
-            const SizedBox(height: 20),
           ],
         ),
       ),
@@ -385,14 +391,10 @@ class _EventsScreenState extends State<EventsScreen> {
             focusedDay: _focusedDay,
             selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
             onDaySelected: (selectedDay, focusedDay) => setState(() { _selectedDay = selectedDay; _focusedDay = focusedDay; }),
-            calendarStyle: const CalendarStyle(
-              defaultTextStyle: TextStyle(color: Colors.white), weekendTextStyle: TextStyle(color: Colors.grey),
-              selectedDecoration: BoxDecoration(color: Color(0xFF1ca931), shape: BoxShape.circle),
-              todayDecoration: BoxDecoration(color: Color(0xFF3b3e44), shape: BoxShape.circle),
-            ),
-            headerStyle: const HeaderStyle(titleTextStyle: TextStyle(color: Colors.white, fontSize: 18), formatButtonVisible: false, leftChevronIcon: Icon(Icons.chevron_left, color: Colors.white), rightChevronIcon: Icon(Icons.chevron_right, color: Colors.white)),
+            calendarStyle: const CalendarStyle(defaultTextStyle: TextStyle(color: Colors.white), selectedDecoration: BoxDecoration(color: Color(0xFF1ca931), shape: BoxShape.circle)),
+            headerStyle: const HeaderStyle(titleTextStyle: TextStyle(color: Colors.white), formatButtonVisible: false),
           ),
-          const Divider(color: Colors.grey, height: 1),
+          const Divider(color: Colors.grey),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance.collection('events').orderBy('date').snapshots(),
@@ -403,51 +405,31 @@ class _EventsScreenState extends State<EventsScreen> {
                   return _selectedDay != null && eventDate.year == _selectedDay!.year && eventDate.month == _selectedDay!.month && eventDate.day == _selectedDay!.day;
                 }).toList();
 
-                if (selectedEvents.isEmpty) return const Center(child: Text("No events on this day.", style: TextStyle(color: Colors.grey)));
+                if (selectedEvents.isEmpty) return const Center(child: Text("No events on this day."));
 
                 return ListView.builder(
                   itemCount: selectedEvents.length,
-                  padding: const EdgeInsets.all(10),
                   itemBuilder: (context, index) {
                     final eventData = selectedEvents[index].data() as Map<String, dynamic>;
                     final eventId = selectedEvents[index].id;
-                    final title = eventData['title'] ?? 'No Title';
                     final List rsvps = eventData['rsvps'] ?? [];
                     final isGoing = rsvps.contains(currentUserId);
 
                     return Card(
                       color: const Color(0xFF3b3e44),
-                      margin: const EdgeInsets.only(bottom: 15),
-                      child: Padding(
-                        padding: const EdgeInsets.all(15.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      margin: const EdgeInsets.all(10),
+                      child: ListTile(
+                        title: Text(eventData['title'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text(eventData['description']),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
-                            const SizedBox(height: 8),
-                            Text(eventData['description'] ?? '', style: const TextStyle(color: Colors.grey)),
-                            const SizedBox(height: 15),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text("${rsvps.length} attending", style: const TextStyle(color: Color(0xFF1ca931), fontWeight: FontWeight.bold)),
-                                Row(
-                                  children: [
-                                    // TASKS BUTTON
-                                    IconButton(
-                                      icon: const Icon(Icons.checklist, color: Colors.white),
-                                      onPressed: () => _showTasksDialog(context, eventId, title),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    ElevatedButton(
-                                      style: ElevatedButton.styleFrom(backgroundColor: isGoing ? Colors.grey[700] : const Color(0xFF1ca931)),
-                                      onPressed: () => _toggleRsvp(eventId, rsvps),
-                                      child: Text(isGoing ? "Cancel" : "RSVP", style: const TextStyle(color: Colors.white)),
-                                    ),
-                                  ],
-                                )
-                              ],
-                            )
+                            IconButton(icon: const Icon(Icons.checklist), onPressed: () => _showTasksDialog(context, eventId, eventData['title'])),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(backgroundColor: isGoing ? Colors.grey : const Color(0xFF1ca931)),
+                              onPressed: () => _toggleRsvp(eventId, rsvps),
+                              child: Text(isGoing ? "Cancel" : "RSVP"),
+                            ),
                           ],
                         ),
                       ),
@@ -480,10 +462,10 @@ class PrayerWallScreen extends StatelessWidget {
           children: [
             const Text("Share a Prayer Request", style: TextStyle(fontSize: 20, color: Colors.white)),
             const SizedBox(height: 15),
-            TextField(controller: contentController, maxLines: 4, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(hintText: "How can we pray for you?", hintStyle: TextStyle(color: Colors.grey), filled: true, fillColor: Color(0xFF25292e))),
+            TextField(controller: contentController, maxLines: 4, decoration: const InputDecoration(hintText: "How can we pray for you?", filled: true, fillColor: Color(0xFF25292e))),
             const SizedBox(height: 20),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1ca931), minimumSize: const Size(double.infinity, 50)),
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1ca931)),
               onPressed: () async {
                 if (contentController.text.isEmpty) return;
                 final user = fb.FirebaseAuth.instance.currentUser!;
@@ -491,11 +473,11 @@ class PrayerWallScreen extends StatelessWidget {
                   'content': contentController.text,
                   'creatorName': user.email!.split('@')[0],
                   'timestamp': Timestamp.now(),
-                  'prayingUsers': [], // Array of User IDs who tapped "Praying"
+                  'prayingUsers': [],
                 });
                 if (context.mounted) Navigator.pop(context);
               },
-              child: const Text("Post Request", style: TextStyle(color: Colors.white)),
+              child: const Text("Post Request"),
             ),
             const SizedBox(height: 30),
           ],
@@ -507,7 +489,6 @@ class PrayerWallScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currentUserId = fb.FirebaseAuth.instance.currentUser!.uid;
-
     return Scaffold(
       appBar: AppBar(title: const Text("Prayer Wall")),
       floatingActionButton: FloatingActionButton(onPressed: () => _showAddPrayerDialog(context), child: const Icon(Icons.add)),
@@ -515,46 +496,28 @@ class PrayerWallScreen extends StatelessWidget {
         stream: FirebaseFirestore.instance.collection('prayers').orderBy('timestamp', descending: true).snapshots(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-          final prayers = snapshot.data!.docs;
-          if (prayers.isEmpty) return const Center(child: Text("No prayers yet.", style: TextStyle(color: Colors.grey)));
-
           return ListView.builder(
-            itemCount: prayers.length,
-            padding: const EdgeInsets.all(10),
+            itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
-              final prayer = prayers[index];
+              final prayer = snapshot.data!.docs[index];
               final List prayingUsers = prayer['prayingUsers'] ?? [];
               final isPraying = prayingUsers.contains(currentUserId);
-
               return Card(
                 color: const Color(0xFF3b3e44),
-                margin: const EdgeInsets.only(bottom: 15),
-                child: Padding(
-                  padding: const EdgeInsets.all(15.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(prayer['creatorName'], style: const TextStyle(color: Color(0xFF1ca931), fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 8),
-                      Text(prayer['content'], style: const TextStyle(color: Colors.white, fontSize: 16)),
-                      const SizedBox(height: 15),
-                      Row(
-                        children: [
-                          GestureDetector(
-                            onTap: () async {
-                              if (isPraying) {
-                                await prayer.reference.update({'prayingUsers': FieldValue.arrayRemove([currentUserId])});
-                              } else {
-                                await prayer.reference.update({'prayingUsers': FieldValue.arrayUnion([currentUserId])});
-                              }
-                            },
-                            child: Icon(Icons.front_hand, color: isPraying ? const Color(0xFF1ca931) : Colors.grey),
-                          ),
-                          const SizedBox(width: 8),
-                          Text("${prayingUsers.length} Praying", style: TextStyle(color: isPraying ? const Color(0xFF1ca931) : Colors.grey)),
-                        ],
-                      )
-                    ],
+                margin: const EdgeInsets.all(10),
+                child: ListTile(
+                  title: Text(prayer['creatorName'], style: const TextStyle(color: Color(0xFF1ca931))),
+                  subtitle: Text(prayer['content']),
+                  trailing: TextButton.icon(
+                    icon: Icon(Icons.front_hand, color: isPraying ? const Color(0xFF1ca931) : Colors.grey),
+                    label: Text("${prayingUsers.length} Praying", style: TextStyle(color: isPraying ? const Color(0xFF1ca931) : Colors.grey)),
+                    onPressed: () async {
+                      if (isPraying) {
+                        await prayer.reference.update({'prayingUsers': FieldValue.arrayRemove([currentUserId])});
+                      } else {
+                        await prayer.reference.update({'prayingUsers': FieldValue.arrayUnion([currentUserId])});
+                      }
+                    },
                   ),
                 ),
               );
@@ -577,7 +540,7 @@ class NeedsBoardScreen extends StatefulWidget {
 }
 
 class _NeedsBoardScreenState extends State<NeedsBoardScreen> {
-  String _selectedFilter = 'All'; // 'All', 'Need', 'Offer'
+  String _selectedFilter = 'All';
 
   void _showAddPostDialog(BuildContext context) {
     final titleController = TextEditingController();
@@ -596,40 +559,22 @@ class _NeedsBoardScreenState extends State<NeedsBoardScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    ChoiceChip(
-                      label: const Text("I have a Need"), selectedColor: const Color(0xFF1ca931),
-                      selected: type == 'Need', onSelected: (val) => setModalState(() => type = 'Need'),
-                    ),
+                    ChoiceChip(label: const Text("Need"), selected: type == 'Need', onSelected: (val) => setModalState(() => type = 'Need')),
                     const SizedBox(width: 10),
-                    ChoiceChip(
-                      label: const Text("I have an Offer"), selectedColor: const Color(0xFF1ca931),
-                      selected: type == 'Offer', onSelected: (val) => setModalState(() => type = 'Offer'),
-                    ),
+                    ChoiceChip(label: const Text("Offer"), selected: type == 'Offer', onSelected: (val) => setModalState(() => type = 'Offer')),
                   ],
                 ),
-                const SizedBox(height: 15),
-                TextField(controller: titleController, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: 'Short Title', filled: true, fillColor: Color(0xFF25292e))),
-                const SizedBox(height: 10),
-                TextField(controller: descController, maxLines: 3, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: 'Details', filled: true, fillColor: Color(0xFF25292e))),
+                TextField(controller: titleController, decoration: const InputDecoration(labelText: 'Title')),
+                TextField(controller: descController, decoration: const InputDecoration(labelText: 'Details')),
                 const SizedBox(height: 20),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1ca931), minimumSize: const Size(double.infinity, 50)),
-                  onPressed: () async {
-                    if (titleController.text.isEmpty) return;
-                    final user = fb.FirebaseAuth.instance.currentUser!;
-                    await FirebaseFirestore.instance.collection('needs_offers').add({
-                      'type': type,
-                      'title': titleController.text,
-                      'description': descController.text,
-                      'creatorId': user.uid,
-                      'creatorName': user.email!.split('@')[0],
-                      'timestamp': Timestamp.now(),
-                    });
-                    if (context.mounted) Navigator.pop(context);
-                  },
-                  child: const Text("Post to Board", style: TextStyle(color: Colors.white)),
-                ),
-                const SizedBox(height: 30),
+                ElevatedButton(onPressed: () async {
+                  final user = fb.FirebaseAuth.instance.currentUser!;
+                  await FirebaseFirestore.instance.collection('needs_offers').add({
+                    'type': type, 'title': titleController.text, 'description': descController.text,
+                    'creatorId': user.uid, 'creatorName': user.email!.split('@')[0], 'timestamp': Timestamp.now(),
+                  });
+                  Navigator.pop(context);
+                }, child: const Text("Post")),
               ],
             ),
           );
@@ -638,116 +583,46 @@ class _NeedsBoardScreenState extends State<NeedsBoardScreen> {
     );
   }
 
-  // Magic: Start a private chat with the poster
-  Future<void> _contactPoster(BuildContext context, String targetUserId) async {
-    final currentUserId = streamClient.state.currentUser!.id;
-    if (currentUserId == targetUserId) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("This is your own post!")));
-      return;
-    }
-    final channel = streamClient.channel('messaging', extraData: {
-      'members': [currentUserId, targetUserId],
-    });
-    await channel.watch();
-    if (context.mounted) {
-      Navigator.of(context).push(MaterialPageRoute(builder: (context) => StreamChannel(channel: channel, child: const ChannelPage())));
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Needs & Offers")),
       floatingActionButton: FloatingActionButton(onPressed: () => _showAddPostDialog(context), child: const Icon(Icons.add)),
-      body: Column(
-        children: [
-          // Filter Chips
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: ['All', 'Need', 'Offer'].map((filter) => Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 5),
-                child: ChoiceChip(
-                  label: Text(filter),
-                  selectedColor: const Color(0xFF1ca931),
-                  selected: _selectedFilter == filter,
-                  onSelected: (val) => setState(() => _selectedFilter = filter),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance.collection('needs_offers').orderBy('timestamp', descending: true).snapshots(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          final posts = snapshot.data!.docs.where((doc) => _selectedFilter == 'All' || doc['type'] == _selectedFilter).toList();
+          return ListView.builder(
+            itemCount: posts.length,
+            itemBuilder: (context, index) {
+              final post = posts[index];
+              return Card(
+                color: const Color(0xFF3b3e44),
+                margin: const EdgeInsets.all(10),
+                child: ListTile(
+                  title: Text(post['title']),
+                  subtitle: Text(post['description']),
+                  trailing: ElevatedButton(
+                    onPressed: () async {
+                      final channel = streamClient.channel('messaging', extraData: {'members': [streamClient.state.currentUser!.id, post['creatorId']]});
+                      await channel.watch();
+                      Navigator.of(context).push(MaterialPageRoute(builder: (context) => StreamChannel(channel: channel, child: const ChannelPage())));
+                    },
+                    child: const Text("Message"),
+                  ),
                 ),
-              )).toList(),
-            ),
-          ),
-          // The Feed
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance.collection('needs_offers').orderBy('timestamp', descending: true).snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-                
-                final posts = snapshot.data!.docs.where((doc) {
-                  if (_selectedFilter == 'All') return true;
-                  return doc['type'] == _selectedFilter;
-                }).toList();
-
-                if (posts.isEmpty) return const Center(child: Text("No posts found.", style: TextStyle(color: Colors.grey)));
-
-                return ListView.builder(
-                  itemCount: posts.length,
-                  padding: const EdgeInsets.all(10),
-                  itemBuilder: (context, index) {
-                    final post = posts[index];
-                    final isNeed = post['type'] == 'Need';
-
-                    return Card(
-                      color: const Color(0xFF3b3e44),
-                      margin: const EdgeInsets.only(bottom: 15),
-                      child: Padding(
-                        padding: const EdgeInsets.all(15.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(post['creatorName'], style: const TextStyle(color: Colors.grey)),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(color: isNeed ? Colors.orange : Colors.blue, borderRadius: BorderRadius.circular(10)),
-                                  child: Text(post['type'], style: const TextStyle(color: Colors.white, fontSize: 12)),
-                                )
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            Text(post['title'], style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-                            const SizedBox(height: 5),
-                            Text(post['description'], style: const TextStyle(color: Colors.white70)),
-                            const SizedBox(height: 15),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1ca931)),
-                                icon: const Icon(Icons.chat, size: 18, color: Colors.white),
-                                label: Text(isNeed ? "I can help" : "Message them", style: const TextStyle(color: Colors.white)),
-                                onPressed: () => _contactPoster(context, post['creatorId']),
-                              ),
-                            )
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-        ],
+              );
+            },
+          );
+        },
       ),
     );
   }
 }
 
 // ==========================================
-// --- 4. MESSAGING SCREENS ---
+// --- 4. MESSAGING ---
 // ==========================================
 class ChannelListScreen extends StatelessWidget {
   const ChannelListScreen({super.key});
@@ -758,7 +633,7 @@ class ChannelListScreen extends StatelessWidget {
       appBar: AppBar(title: const Text("Messages")),
       body: StreamChannelListView(
         controller: StreamChannelListController(
-          client: streamClient, filter: Filter.in_('members', [streamClient.state.currentUser!.id]), limit: 20,
+          client: streamClient, filter: Filter.in_('members', [streamClient.state.currentUser!.id]),
         ),
         onChannelTap: (channel) => Navigator.of(context).push(MaterialPageRoute(builder: (context) => StreamChannel(channel: channel, child: const ChannelPage()))),
       ),
@@ -772,54 +647,35 @@ class ChannelListScreen extends StatelessWidget {
 
 class ChannelPage extends StatelessWidget {
   const ChannelPage({super.key});
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: const StreamChannelHeader(),
-      body: Column(children: const [Expanded(child: StreamMessageListView()), StreamMessageInput()]),
-    );
+    return Scaffold(appBar: const StreamChannelHeader(), body: Column(children: const [Expanded(child: StreamMessageListView()), StreamMessageInput()]));
   }
 }
 
 class UsersListScreen extends StatefulWidget {
   const UsersListScreen({super.key});
-
   @override
   State<UsersListScreen> createState() => _UsersListScreenState();
 }
 
 class _UsersListScreenState extends State<UsersListScreen> {
   late final StreamUserListController _userListController;
-
   @override
   void initState() {
     super.initState();
-    _userListController = StreamUserListController(
-      client: streamClient, limit: 20,
-      filter: Filter.notEqual('id', streamClient.state.currentUser!.id),
-      sort: [const SortOption('last_active', direction: SortOption.ASC)],
-    );
+    _userListController = StreamUserListController(client: streamClient, filter: Filter.notEqual('id', streamClient.state.currentUser!.id));
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Start a New Chat")),
+      appBar: AppBar(title: const Text("New Chat")),
       body: StreamUserListView(
         controller: _userListController,
-        itemBuilder: (context, users, index, defaultWidget) {
-          final user = users[index];
-          return ListTile(
-            leading: CircleAvatar(backgroundImage: NetworkImage(user.image ?? "https://i.pravatar.cc/150")),
-            title: Text(user.name, style: const TextStyle(color: Colors.white)),
-            subtitle: Text("Last active: ${user.lastActive?.toLocal() ?? 'Never'}", style: const TextStyle(color: Colors.grey)),
-            onTap: () async {
-              final channel = streamClient.channel('messaging', extraData: {'members': [streamClient.state.currentUser!.id, user.id]});
-              await channel.watch();
-              if (mounted) Navigator.of(context).push(MaterialPageRoute(builder: (context) => StreamChannel(channel: channel, child: const ChannelPage())));
-            },
-          );
+        onUserTap: (user) async {
+          final channel = streamClient.channel('messaging', extraData: {'members': [streamClient.state.currentUser!.id, user.id]});
+          await channel.watch();
+          Navigator.of(context).push(MaterialPageRoute(builder: (context) => StreamChannel(channel: channel, child: const ChannelPage())));
         },
       ),
     );
@@ -827,21 +683,94 @@ class _UsersListScreenState extends State<UsersListScreen> {
 }
 
 // ==========================================
-// --- 5. PROFILE SCREEN ---
+// --- 5. ENHANCED PROFILE SCREEN ---
 // ==========================================
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-        onPressed: () async {
-          await streamClient.disconnectUser(); 
-          await fb.FirebaseAuth.instance.signOut(); 
-        },
-        child: const Text("Log Out", style: TextStyle(color: Colors.white)),
+    final user = fb.FirebaseAuth.instance.currentUser!;
+
+    return Scaffold(
+      appBar: AppBar(title: const Text("My Profile")),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 1. User Header
+            FutureBuilder<DocumentSnapshot>(
+              future: FirebaseFirestore.instance.collection('users').doc(user.uid).get(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) return const LinearProgressIndicator();
+                final userData = snapshot.data!.data() as Map<String, dynamic>?;
+                final firstName = userData?['firstName'] ?? 'User';
+                final lastName = userData?['lastName'] ?? '';
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("$firstName $lastName", style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+                    Text(user.email ?? '', style: const TextStyle(color: Colors.grey)),
+                  ],
+                );
+              },
+            ),
+            const SizedBox(height: 30),
+            const Text("Events I'm Attending", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1ca931))),
+            const Divider(color: Colors.grey),
+            
+            // 2. Events Attending List
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('events')
+                  .where('rsvps', arrayContains: user.uid)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) return const CircularProgressIndicator();
+                final myEvents = snapshot.data!.docs;
+
+                if (myEvents.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: Text("No upcoming events.", style: TextStyle(color: Colors.grey)),
+                  );
+                }
+
+                return ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: myEvents.length,
+                  itemBuilder: (context, index) {
+                    final event = myEvents[index];
+                    return Card(
+                      color: const Color(0xFF3b3e44),
+                      child: ListTile(
+                        title: Text(event['title'], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        subtitle: Text(event['description'], maxLines: 1),
+                        trailing: const Icon(Icons.check_circle, color: Color(0xFF1ca931)),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+            const SizedBox(height: 40),
+            
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                onPressed: () async {
+                  await streamClient.disconnectUser(); 
+                  await fb.FirebaseAuth.instance.signOut(); 
+                },
+                child: const Text("Log Out", style: TextStyle(color: Colors.white)),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
