@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "872559821258",
+    "project_id": "ucity-garden",
+    "storage_bucket": "ucity-garden.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:872559821258:android:08b9f84034dcb894570f33",
+        "android_client_info": {
+          "package_name": "com.example.ucityapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "872559821258-20tn8o79a8qu8hftt16p0du7parfoban.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDZEEqku7EuyHe9qoXiz_tMvNz3vNMKcWI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "872559821258-20tn8o79a8qu8hftt16p0du7parfoban.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "872559821258-labt21dp2h0l7361qogphgadnus18vl9.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "host.exp.exponent"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
