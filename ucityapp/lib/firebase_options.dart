@@ -52,7 +52,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyDZEEqku7EuyHe9qoXiz_tMvNz3vNMKcWI',
-    appId: '1:872559821258:android:cb307e09afa21e71570f33',
+    appId: '1:872559821258:android:9db52937925cc2eb570f33',
     messagingSenderId: '872559821258',
     projectId: 'ucity-garden',
     storageBucket: 'ucity-garden.firebasestorage.app',
@@ -60,11 +60,11 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyA5TPhmA4bPPFmaCuNrKk9ewrowibSUEm8',
-    appId: '1:872559821258:ios:b2e34cc9f42849bd570f33',
+    appId: '1:872559821258:ios:788ee75d86611580570f33',
     messagingSenderId: '872559821258',
     projectId: 'ucity-garden',
     storageBucket: 'ucity-garden.firebasestorage.app',
-    iosBundleId: 'com.ucitygarden.ucityapp',
+    iosBundleId: 'com.shymin.thegardenbyucity',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
