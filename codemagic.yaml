@@ -2,6 +2,7 @@ workflows:
   android-release:
     name: Android Release
     max_build_duration: 60
+    working_directory: ucityapp
     environment:
       flutter: latest
       android_signing:
@@ -25,6 +26,7 @@ workflows:
   ios-release:
     name: iOS Release
     max_build_duration: 120
+    working_directory: ucityapp
     environment:
       flutter: latest
       xcode: latest
@@ -38,7 +40,7 @@ workflows:
         script: flutter pub get
       - name: Set up Firebase GoogleService-Info.plist
         script: |
-          echo $GOOGLE_SERVICE_INFO_PLIST | base64 --decode > $CM_BUILD_DIR/ios/Runner/GoogleService-Info.plist
+          echo $GOOGLE_SERVICE_INFO_PLIST | base64 --decode > ios/Runner/GoogleService-Info.plist
       - name: Build iOS IPA
         script: flutter build ipa --release --export-options-plist=$CM_EXPORT_OPTIONS_PATH
     artifacts:
