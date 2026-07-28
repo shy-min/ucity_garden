@@ -6,7 +6,7 @@ workflows:
     environment:
       flutter: 3.41.1
       android_signing:
-        - ucityapp_keystore  # Must match the keystore reference name in Codemagic: Teams > Code signing identities > Android
+        - UCityY  # Must match the keystore reference name in Codemagic: Code signing identities > Android keystores
     scripts:
       - name: Get Flutter packages
         script: flutter pub get
