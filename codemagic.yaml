@@ -27,6 +27,10 @@ workflows:
     name: iOS Release
     max_build_duration: 120
     working_directory: ucityapp
+    integrations:
+      # Must exactly match the App Store Connect API key name in
+      # Codemagic: Teams > Integrations > Developer Portal.
+      app_store_connect: CM_Key
     environment:
       flutter: 3.41.1
       xcode: latest
@@ -55,11 +59,12 @@ workflows:
         notify:
           success: true
           failure: true
-      # To upload builds to TestFlight automatically, uncomment the block below and
-      # add at the workflow level (same indent as "environment:"):
-      #   integrations:
-      #     app_store_connect: <name of your App Store Connect API key in Codemagic>
-      #
-      # app_store_connect:
-      #   auth: integration
-      #   submit_to_testflight: true
+      app_store_connect:
+        auth: integration
+        # Uploads every successful build to TestFlight. Internal testers can
+        # install it as soon as Apple finishes processing. To distribute to
+        # external testers, add e.g.:
+        #   beta_groups:
+        #     - <your external tester group name>
+        # (external groups require Apple's beta review on first build)
+        submit_to_testflight: true
