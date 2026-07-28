@@ -4,14 +4,14 @@ workflows:
     max_build_duration: 60
     working_directory: ucityapp
     environment:
-      flutter: latest
+      flutter: 3.41.1
       android_signing:
-        - ucityapp_keystore  # Add your keystore in Codemagic: Teams > Code signing > Android
+        - ucityapp_keystore  # Must match the keystore reference name in Codemagic: Teams > Code signing identities > Android
     scripts:
       - name: Get Flutter packages
         script: flutter pub get
       - name: Build Android App Bundle
-        script: flutter build appbundle --release
+        script: flutter build appbundle --release --build-number=$PROJECT_BUILD_NUMBER
     artifacts:
       - build/**/outputs/**/*.aab
       - build/**/outputs/**/mapping.txt
@@ -28,21 +28,23 @@ workflows:
     max_build_duration: 120
     working_directory: ucityapp
     environment:
-      flutter: latest
+      flutter: 3.41.1
       xcode: latest
       ios_signing:
+        # Requires the App Store Connect / Apple Developer Portal integration to be
+        # enabled in Codemagic: Teams > Team settings > Integrations.
         distribution_type: app_store
         bundle_identifier: com.shymin.thegardenbyucity
-      groups:
-        - firebase_ios  # Create this group in Codemagic with GOOGLE_SERVICE_INFO_PLIST (base64)
     scripts:
       - name: Get Flutter packages
         script: flutter pub get
-      - name: Set up Firebase GoogleService-Info.plist
-        script: |
-          echo $GOOGLE_SERVICE_INFO_PLIST | base64 --decode > ios/Runner/GoogleService-Info.plist
+      - name: Set up code signing settings on Xcode project
+        script: xcode-project use-profiles
       - name: Build iOS IPA
-        script: flutter build ipa --release --export-options-plist=$CM_EXPORT_OPTIONS_PATH
+        script: |
+          flutter build ipa --release \
+            --build-number=$PROJECT_BUILD_NUMBER \
+            --export-options-plist=/Users/builder/export_options.plist
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
@@ -53,3 +55,11 @@ workflows:
         notify:
           success: true
           failure: true
+      # To upload builds to TestFlight automatically, uncomment the block below and
+      # add at the workflow level (same indent as "environment:"):
+      #   integrations:
+      #     app_store_connect: <name of your App Store Connect API key in Codemagic>
+      #
+      # app_store_connect:
+      #   auth: integration
+      #   submit_to_testflight: true

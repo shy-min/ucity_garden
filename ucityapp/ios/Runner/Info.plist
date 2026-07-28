@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Ucityapp</string>
+	<string>The Garden</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -24,8 +24,18 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>The Garden uses the camera to let you take photos and videos to share in chat messages.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>The Garden uses the microphone when you record videos or voice messages to share in chat.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>The Garden accesses your photo library so you can attach photos to chat messages.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>The Garden saves photos you download from chat messages to your photo library.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

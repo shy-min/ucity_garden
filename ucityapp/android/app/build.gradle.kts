@@ -43,7 +43,15 @@ android {
 
     signingConfigs {
         create("release") {
-            if (keystorePropertiesFile.exists()) {
+            // On Codemagic, android_signing provides the keystore via CM_* env vars.
+            // Locally, key.properties is used if present.
+            val cmKeystorePath = System.getenv("CM_KEYSTORE_PATH")
+            if (cmKeystorePath != null) {
+                storeFile = file(cmKeystorePath)
+                storePassword = System.getenv("CM_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("CM_KEY_ALIAS")
+                keyPassword = System.getenv("CM_KEY_PASSWORD")
+            } else if (keystorePropertiesFile.exists()) {
                 keyAlias = keystoreProperties["keyAlias"] as String?
                 keyPassword = keystoreProperties["keyPassword"] as String?
                 storeFile = keystoreProperties["storeFile"]?.let { file(it) }
@@ -54,9 +62,11 @@ android {
 
     buildTypes {
         release {
-            signingConfig = if (keystorePropertiesFile.exists()) {
+            signingConfig = if (System.getenv("CM_KEYSTORE_PATH") != null || keystorePropertiesFile.exists()) {
                 signingConfigs.getByName("release")
             } else {
+                // No keystore available (e.g. local dev machine): fall back to
+                // debug signing so release builds still work for testing.
                 signingConfigs.getByName("debug")
             }
         }

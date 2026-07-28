@@ -649,7 +649,7 @@ class ChannelPage extends StatelessWidget {
   const ChannelPage({super.key});
   @override
   Widget build(BuildContext context) {
-    return Scaffold(appBar: const StreamChannelHeader(), body: Column(children: const [Expanded(child: StreamMessageListView()), StreamMessageInput()]));
+    return Scaffold(appBar: const StreamChannelHeader(), body: Column(children: [const Expanded(child: StreamMessageListView()), StreamMessageComposer()]));
   }
 }
 
