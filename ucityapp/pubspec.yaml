@@ -42,6 +42,9 @@ dependencies:
   table_calendar: ^3.1.2
   cloud_functions: ^6.5.0
   url_launcher: ^6.3.3
+  # Must be a regular dependency: it ships a small native plugin, and release
+  # builds leave out dev_dependency plugins.
+  flutter_native_splash: ^2.4.6
 
 dev_dependencies:
   flutter_test:
@@ -54,7 +57,6 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.4
-  flutter_native_splash: ^2.4.6
 
 # App icon (regenerate with: dart run flutter_launcher_icons)
 flutter_launcher_icons:
