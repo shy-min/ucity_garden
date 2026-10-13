@@ -11,6 +11,8 @@ workflows:
       - name: Get Flutter packages
         script: flutter pub get
       - name: Build Android App Bundle
+        # After installing the Stream Firebase extension (STORE_RELEASE.md 0.2),
+        # append: --dart-define=STREAM_DEV_TOKENS=false
         script: flutter build appbundle --release --build-number=$PROJECT_BUILD_NUMBER
     artifacts:
       - build/**/outputs/**/*.aab
@@ -22,6 +24,11 @@ workflows:
         notify:
           success: true
           failure: true
+      # To upload straight to Google Play once the Play Console app exists, add a
+      # Google Play service account key in Codemagic and uncomment:
+      # google_play:
+      #   credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+      #   track: internal
 
   ios-release:
     name: iOS Release
@@ -45,6 +52,8 @@ workflows:
       - name: Set up code signing settings on Xcode project
         script: xcode-project use-profiles
       - name: Build iOS IPA
+        # After installing the Stream Firebase extension (STORE_RELEASE.md 0.2),
+        # append: --dart-define=STREAM_DEV_TOKENS=false
         script: |
           flutter build ipa --release \
             --build-number=$PROJECT_BUILD_NUMBER \

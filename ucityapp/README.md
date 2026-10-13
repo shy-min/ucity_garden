@@ -1,17 +1,36 @@
-# ucityapp
+# The Garden (ucityapp)
 
-A new Flutter project.
+The community app for **UCity The Church**, built with Flutter. Members can:
 
-## Getting Started
+- **Events**: see the church calendar, RSVP, and sign up for volunteer tasks
+- **Prayer Wall**: share prayer requests and tap "Praying"
+- **Needs & Offers**: ask for help or offer it, and message the poster
+- **Chat**: 1:1 messaging (Stream Chat)
+- **Profile**: upcoming RSVPs, blocked members, guidelines, privacy policy, delete account
 
-This project is a starting point for a Flutter application.
+Backend: Firebase Auth + Cloud Firestore (project `ucity-garden`), Stream Chat for messaging.
 
-A few resources to get you started if this is your first Flutter project:
+## Layout
+```
+lib/
+  main.dart                 app, auth gate, tab bar
+  theme.dart                colors, AppConfig (support email, Stream key, flags)
+  services/                 chat connection, moderation (report/block), user profile
+  screens/                  auth, events, prayer wall, needs board, chat, profile, legal
+firestore.rules             database security rules (deploy these!)
+assets/icon/                app icon sources
+```
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+## Run
+```bash
+flutter pub get
+flutter run
+```
+Against local Firebase emulators (no real data touched):
+```bash
+firebase emulators:start --only auth,firestore --project ucity-garden
+flutter run --dart-define=USE_FIREBASE_EMULATOR=true
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Release
+See [`../STORE_RELEASE.md`](../STORE_RELEASE.md). Builds run on Codemagic (`../codemagic.yaml`).
