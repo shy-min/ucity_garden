@@ -1,0 +1,97 @@
+rules_version = '2';
+
+// Security rules for The Garden (Firebase project ucity-garden).
+// Deploy: Firebase console → Firestore Database → Rules → paste → Publish,
+// or `firebase deploy --only firestore:rules` from the ucityapp folder.
+//
+// Moderators: create a document at admins/{their uid} in the console
+// (any content, e.g. { name: "Pastor ..." }). Admins can delete any post.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isSelf(uid) { return signedIn() && request.auth.uid == uid; }
+    function isAdmin() {
+      return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    function onlyChanges(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+    }
+    function shortString(field, max) {
+      return request.resource.data[field] is string && request.resource.data[field].size() <= max;
+    }
+
+    match /admins/{uid} {
+      allow read: if isSelf(uid);
+      allow write: if false; // managed in the Firebase console
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn();
+      allow create, update: if isSelf(uid);
+      allow delete: if isSelf(uid) || isAdmin();
+    }
+
+    match /events/{eventId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.creatorId == request.auth.uid
+        && shortString('title', 200);
+      allow update: if signedIn() && (
+        resource.data.creatorId == request.auth.uid
+        || isAdmin()
+        || onlyChanges(['rsvps'])
+      );
+      allow delete: if signedIn() && (resource.data.creatorId == request.auth.uid || isAdmin());
+
+      match /tasks/{taskId} {
+        function eventCreator() {
+          return get(/databases/$(database)/documents/events/$(eventId)).data.creatorId;
+        }
+        allow read: if signedIn();
+        allow create: if signedIn() && shortString('name', 200);
+        allow update: if signedIn() && (
+          isAdmin()
+          || eventCreator() == request.auth.uid
+          || (onlyChanges(['assigneeId', 'assigneeName']) && (
+                // claim an open task for yourself
+                (resource.data.assigneeId == null && request.resource.data.assigneeId == request.auth.uid)
+                // or release your own claim
+                || (resource.data.assigneeId == request.auth.uid && request.resource.data.assigneeId == null)
+             ))
+        );
+        allow delete: if signedIn() && (
+          resource.data.get('creatorId', null) == request.auth.uid
+          || eventCreator() == request.auth.uid
+          || isAdmin()
+        );
+      }
+    }
+
+    match /prayers/{prayerId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.creatorId == request.auth.uid
+        && shortString('content', 1000);
+      allow update: if signedIn() && (
+        resource.data.get('creatorId', null) == request.auth.uid
+        || isAdmin()
+        || onlyChanges(['prayingUsers'])
+      );
+      allow delete: if signedIn() && (resource.data.get('creatorId', null) == request.auth.uid || isAdmin());
+    }
+
+    match /needs_offers/{postId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.creatorId == request.auth.uid
+        && shortString('title', 200);
+      allow update, delete: if signedIn() && (resource.data.creatorId == request.auth.uid || isAdmin());
+    }
+
+    match /reports/{reportId} {
+      allow create: if signedIn() && request.resource.data.reporterId == request.auth.uid;
+      allow read, update, delete: if isAdmin();
+    }
+  }
+}
